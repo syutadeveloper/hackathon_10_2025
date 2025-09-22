@@ -15,7 +15,7 @@
 </head>
 
 <body>
-    <h2>NASA EONET の最新イベント (GIBS 衛星画像)</h2>
+    <h2>Новые события NASA EONET (спутниковые снимки GIBS)</h2>
     <div id="event"></div>
     <div id="map"></div>
 
@@ -30,24 +30,24 @@
         }
 
         function initMap(lat, lon, eventName) {
-            // Leaflet地図を作成
+            // Создать карту Leaflet
             const map = L.map("map").setView([lat, lon], 4);
 
-            // NASA GIBS の MODIS True Color (日次更新) タイルを背景に設定
-            //const today = new Date().toISOString().split("T")[0]; // 今日の日付を YYYY-MM-DD 形式で取得
+            // Показать фон NASA GIBS (MODIS True Color, обновляется каждый день)
+            //const today = new Date().toISOString().split("T")[0]; // Сегодняшняя дата в формате YYYY-MM-DD
             const today = '2025-09-01';
 
             L.tileLayer(
                 `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${today}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
                 {
-                    attribution: "Imagery courtesy NASA GIBS",
+                    attribution: "Изображения NASA GIBS",
                     tileSize: 256,
                     minZoom: 1,
                     maxZoom: 9
                 }
             ).addTo(map);
 
-            // イベント位置にマーカーを追加
+            // Добавить маркер на место события
             L.marker([lat, lon]).addTo(map)
                 .bindPopup(eventName)
                 .openPopup();
@@ -64,15 +64,15 @@
                     const name = firstEvent.title;
 
                     document.getElementById("event").textContent =
-                        `イベント: ${name} (lat: ${lat}, lon: ${lon})`;
+                        `Событие: ${name} (lat: ${lat}, lon: ${lon})`;
 
                     initMap(lat, lon, name);
                 } else {
-                    document.getElementById("event").textContent = "イベントが見つかりませんでした。";
+                    document.getElementById("event").textContent = "События не найдены.";
                 }
             } catch (err) {
                 console.error(err);
-                document.getElementById("event").textContent = "データ取得エラー";
+                document.getElementById("event").textContent = "Ошибка получения данных";
             }
         }
 
