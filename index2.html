@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Последние события NASA EONET</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    #map { height: 600px; margin-top: 10px; }
+    #thumbnails { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .thumb { cursor: pointer; border: 1px solid #ccc; padding: 5px; width: 200px; }
+    .thumb img { max-width: 100%; }
+    .thumb-title { font-size: 12px; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <h2>Последние 10 событий NASA EONET</h2>
+  <div id="thumbnails"></div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const apiKey = "DEMO_KEY"; // При необходимости укажите свой API-ключ NASA
+    const map = L.map("map").setView([20, 0], 2);
+
+    // Спутниковые тайлы NASA GIBS (MODIS Terra True Color, дата фиксирована для примера)
+    const today = "2025-09-01"; 
+    const gibsLayer = L.tileLayer(
+      `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${today}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+      { attribution: "Изображения предоставлены NASA GIBS", maxZoom: 9, minZoom: 1 }
+    ).addTo(map);
+
+    // Получение событий из API EONET
+    async function loadEvents() {
+      const res = await fetch(`https://eonet.gsfc.nasa.gov/api/v3/events?limit=10`);
+      const data = await res.json();
+
+      const container = document.getElementById("thumbnails");
+
+      data.events.forEach(event => {
+        const [lon, lat] = event.geometry[0].coordinates;
+
+        // Превью с помощью WMS (статическое изображение)
+        const thumbUrl = `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/jpeg&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&WIDTH=200&HEIGHT=200&CRS=EPSG:4326&BBOX=${lat-2},${lon-2},${lat+2},${lon+2}&TIME=${today}`;
+
+        const div = document.createElement("div");
+        div.className = "thumb";
+        div.innerHTML = `
+          <img src="${thumbUrl}" alt="${event.title}"/>
+          <div class="thumb-title">${event.title}</div>
+        `;
+
+        // Переход к событию при клике
+        div.onclick = () => {
+          map.setView([lat, lon], 6);
+          L.marker([lat, lon]).addTo(map)
+            .bindPopup(`<b>${event.title}</b>`).openPopup();
+        };
+
+        container.appendChild(div);
+      });
+    }
+
+    loadEvents();
+  </script>
+</body>
+</html>

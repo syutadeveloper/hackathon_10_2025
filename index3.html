@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>События EONET с картами NASA</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 500px; margin-top: 10px; }
+    .thumb { cursor: pointer; margin: 5px; display: inline-block; }
+    .thumb img { width: 150px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>Последние события (EONET)</h1>
+  <div id="thumbnails"></div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    async function loadEvents() {
+      const res = await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?limit=10');
+      const data = await res.json();
+      const events = data.events;
+      const thumbs = document.getElementById('thumbnails');
+      thumbs.innerHTML = "";
+
+      events.forEach(ev => {
+        const div = document.createElement('div');
+        div.className = "thumb";
+        div.innerHTML = `<img src="https://via.placeholder.com/150?text=${encodeURIComponent(ev.title)}" title="${ev.title}"><br>${ev.title}`;
+        div.onclick = () => showEventOnMap(ev);
+        thumbs.appendChild(div);
+      });
+    }
+
+    async function showEventOnMap(event) {
+      if (!event.geometry || event.geometry.length === 0) return;
+
+      const coords = event.geometry[0].coordinates;
+      const latlng = [coords[1], coords[0]];
+      map.setView(latlng, 5);
+
+      // Сначала уберем старые слои
+      map.eachLayer(layer => {
+        if (layer instanceof L.TileLayer && !layer.getAttribution().includes("OpenStreetMap")) {
+          map.removeLayer(layer);
+        }
+      });
+
+      // Получим слои GIBS
+      const res = await fetch('https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi?request=GetCapabilities');
+      const text = await res.text();
+
+      // Находим слой по категории события
+      let selectedLayer = "MODIS_Terra_CorrectedReflectance_TrueColor";
+      if (event.categories && event.categories.length > 0) {
+        const cat = event.categories[0].title.toLowerCase();
+        if (cat.includes("wildfire")) {
+          selectedLayer = "MODIS_Terra_Thermal_Anomalies_Day";
+        } else if (cat.includes("storm")) {
+          selectedLayer = "VIIRS_SNPP_CorrectedReflectance_TrueColor";
+        } else if (cat.includes("volcano")) {
+          selectedLayer = "MODIS_Terra_Thermal_Anomalies_Day";
+        }
+      }
+
+      L.tileLayer(
+        `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${selectedLayer}/default/2025-09-01/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+        {
+          attribution: "NASA GIBS",
+          tileSize: 256,
+          maxZoom: 9
+        }
+      ).addTo(map);
+
+      L.marker(latlng).addTo(map).bindPopup(event.title).openPopup();
+    }
+
+    loadEvents();
+  </script>
+</body>
+</html>
