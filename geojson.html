@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Пример EONET GeoJSON</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map {
+      height: 600px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Пример EONET GeoJSON</h1>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Создать карту
+    const map = L.map('map').setView([20, 0], 2);
+
+    // Добавить слой OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // URL API EONET v3 (GeoJSON)
+    const url = "https://eonet.gsfc.nasa.gov/api/v3/events/geojson";
+
+    // Получить данные GeoJSON и показать на карте
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          onEachFeature: function (feature, layer) {
+            // Добавить всплывающее окно для события
+            const props = feature.properties;
+            const title = props.title || "Нет названия";
+            const category = props.categories ? props.categories.map(c => c.title).join(", ") : "Неизвестно";
+            const date = props.date || "Нет даты";
+            layer.bindPopup(`<b>${title}</b><br>Категория: ${category}<br>Дата: ${date}`);
+          }
+        }).addTo(map);
+      })
+      .catch(err => console.error("Ошибка загрузки данных:", err));
+  </script>
+</body>
+</html>
